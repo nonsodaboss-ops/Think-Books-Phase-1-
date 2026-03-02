@@ -1,32 +1,30 @@
-import express from "express";
-import connectDB from "./database.js";
-import Recommendation from "./models/recommendation.js";
-import dotenv from 'dotenv';
+const express = require('express');
+const session = require('express-session');
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const authRoutes = require('./src/routes/auth');
 
 dotenv.config();
-
-
 const app = express();
 
-// Connect to MongoDB
-connectDB();
-
+app.use('/', authRoutes);
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.get("/", (req, res) => {
-  res.send("API is running...");
-});
+// Session middleware
+app.use(session({
+  secret: process.env.SESSION_SECRET, // keep this in .env
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false } // set true if using HTTPS
+}));
 
-// Example route to test saving a book recommendation
-app.post("/recommendations", async (req, res) => {
-  try {
-    const rec = new Recommendation(req.body);
-    await rec.save();
-    res.status(201).send(rec);
-  } catch (error) {
-    res.status(400).send({ error: error.message });
-  }
-});
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error(err));
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Use auth routes
+app.use('/', authRoutes);
+
+app.listen(3000, () => console.log('Server running on port 3000'));
